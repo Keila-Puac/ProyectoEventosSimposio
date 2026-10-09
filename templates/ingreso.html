@@ -200,6 +200,7 @@ function beep(ok) {
         const AudioCtx =
             window.AudioContext || window.webkitAudioContext;
 
+
         if (!AudioCtx) return;
 
         const audio = new AudioCtx();
