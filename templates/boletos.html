@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Boleto - Simposio 2026{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-primary border-2 shadow-lg p-4 text-center rounded-4">
+                <span class="badge bg-success mb-2 px-3 py-2 fw-semibold">Pago Validado</span>
+                <h4 class="fw-bold">XIX Simposio de Ingeniería</h4>
+                <hr>
+                <div class="text-start small mb-3">
+                    <p class="mb-1"><strong>Estudiante:</strong> {{ estudiante.nombre | default('Estudiante') }}</p>
+                    <p class="mb-1"><strong>Carné:</strong> {{ estudiante.carne | default('20260000') }}</p>
+                    <p class="mb-0"><strong>Ticket Asignado:</strong> <span class="badge bg-primary">{{ id_ticket | default('TCK-1001') }}</span></p>
+                </div>
+                <div class="bg-light p-3 rounded-3 d-inline-block my-2">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ id_ticket | default('TCK-1001') }}" alt="Código QR" class="img-fluid">
+                </div>
+                <div class="d-grid gap-2 mt-3">
+                    <button onclick="window.print()" class="btn btn-outline-primary fw-bold"><i class="bi bi-printer me-2"></i>Imprimir / PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

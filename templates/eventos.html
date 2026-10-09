@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Simposio Anual 2026{% endblock %}
+
+{% block content %}
+    <!-- Encabezado / Hero Section de la imagen -->
+    <header class="hero-section text-center">
+        <div class="container">
+            <span class="badge bg-warning text-dark mb-3 px-3 py-2 fw-semibold">Evento Presencial & Digital</span>
+            <h1 class="display-4 fw-bold">Simposio Anual de Innovación y Tecnología</h1>
+            <p class="lead mt-3 mx-auto" style="max-width: 700px;">
+                Acompáñanos en una jornada llena de conferencias magistrales, talleres interactivos y networking con profesionales de la industria.
+            </p>
+            <div class="mt-4">
+                <a href="/datos" class="btn btn-warning btn-lg fw-bold me-2 px-4 shadow-sm">
+                    <i class="bi bi-ticket-perforated-fill me-2"></i>Obtener Entrada
+                </a>
+                <a href="#cronograma" class="btn btn-outline-light btn-lg px-4">Ver Cronograma</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Cronograma -->
+    <section id="cronograma" class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">Cronograma de Actividades</h2>
+                <p class="text-muted">Explora las conferencias disponibles y consulta los cupos en tiempo real</p>
+            </div>
+
+            <div class="row g-4">
+                <!-- Conferencia 1 -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm card-conferencia">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary-subtle text-primary fw-semibold"><i class="bi bi-clock me-1"></i>09:00 AM</span>
+                                <span class="badge bg-success badge-cupos"><i class="bi bi-person-check me-1"></i>45 Cupos</span>
+                            </div>
+                            <h5 class="card-title fw-bold mt-2">Inteligencia Artificial y Desarrollo Web</h5>
+                            <p class="card-text text-muted flex-grow-1">
+                                Estrategias avanzadas para integrar modelos de lenguaje en arquitecturas en la nube.
+                            </p>
+                            <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                                <small class="text-secondary fw-semibold"><i class="bi bi-person-circle me-1"></i>Ing. Carlos Mendoza</small>
+                                <a href="/datos" class="btn btn-outline-primary btn-sm rounded-pill">Inscribirme</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conferencia 2 -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm card-conferencia">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary-subtle text-primary fw-semibold"><i class="bi bi-clock me-1"></i>11:00 AM</span>
+                                <span class="badge bg-warning text-dark badge-cupos"><i class="bi bi-exclamation-triangle me-1"></i>12 Cupos</span>
+                            </div>
+                            <h5 class="card-title fw-bold mt-2">Ciberseguridad en Entornos Cloud</h5>
+                            <p class="card-text text-muted flex-grow-1">
+                                Principios de protección de datos, autenticación segura y mitigación de riesgos.
+                            </p>
+                            <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                                <small class="text-secondary fw-semibold"><i class="bi bi-person-circle me-1"></i>Dra. Sofía Ramos</small>
+                                <a href="/datos" class="btn btn-outline-primary btn-sm rounded-pill">Inscribirme</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conferencia 3 -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm card-conferencia">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary-subtle text-primary fw-semibold"><i class="bi bi-clock me-1"></i>02:00 PM</span>
+                                <span class="badge bg-success badge-cupos"><i class="bi bi-person-check me-1"></i>30 Cupos</span>
+                            </div>
+                            <h5 class="card-title fw-bold mt-2">Bases de Datos de Alto Rendimiento</h5>
+                            <p class="card-text text-muted flex-grow-1">
+                                Optimización de consultas, indexación y escalabilidad con MySQL en producción.
+                            </p>
+                            <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                                <small class="text-secondary fw-semibold"><i class="bi bi-person-circle me-1"></i>MSc. Roberto Gómez</small>
+                                <a href="/datos" class="btn btn-outline-primary btn-sm rounded-pill">Inscribirme</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
