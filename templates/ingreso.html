@@ -1,37 +1,591 @@
-{% extends 'base.html' %}
+```html
+{% extends "base.html" %}
 
-{% block title %}Control de Acceso - Simposio 2026{% endblock %}
+{% block title %}Lector QR - Control de Ingreso{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 text-center">
-            <h3 class="fw-bold mb-3"><i class="bi bi-qr-code-scan text-primary me-2"></i>Escaneo de Entradas</h3>
 
-            <div class="card bg-dark text-white border-0 shadow-sm p-3 mb-4">
-                <form action="/ingreso" method="POST">
-                    <label class="form-label">Ingresar o Escanear Código del Ticket</label>
-                    <div class="input-group">
-                        <input type="text" name="id_ticket" class="form-control text-center fw-bold" placeholder="Ej. TCK-1001" autofocus required>
-                        <button class="btn btn-primary fw-bold" type="submit">Validar</button>
-                    </div>
-                </form>
+<h1 class="page-title h2 mb-4 fw-bold">
+    <i class="bi bi-qr-code-scan text-primary me-2"></i>
+    Lector QR · Control de ingreso
+</h1>
+
+{% if not total_part %}
+<div class="alert alert-warning border-0 shadow-sm">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    No hay participantes cargados. Sube tu Excel en
+    <a href="{{ url_for('datos') }}" class="alert-link">Base de datos</a>.
+</div>
+{% endif %}
+
+{% if not eventos %}
+
+<div class="alert alert-info border-0 shadow-sm">
+    <i class="bi bi-info-circle me-2"></i>
+    Primero
+    <a href="{{ url_for('nuevo_evento') }}" class="alert-link">
+        crea un evento
+    </a>.
+</div>
+
+{% else %}
+
+<div class="row g-4">
+
+    <!-- Panel del lector QR -->
+    <div class="col-lg-5">
+
+        <div class="card card-soft p-4 border-0 shadow-sm rounded-4">
+
+            <label for="evento" class="form-label fw-semibold">
+                Evento
+            </label>
+
+            <select id="evento" class="form-select mb-3">
+                {% for e in eventos %}
+                <option value="{{ e.id }}"
+                    {% if e.id == sel %}selected{% endif %}>
+                    {{ e.fecha }} {{ e.hora }} — {{ e.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <!-- Visor de cámara -->
+            <div
+                id="visor"
+                class="rounded-3 overflow-hidden mb-2 shadow-sm"
+                style="display: none; width: 100%;">
             </div>
 
-            {% if estado == 'permitido' %}
-            <div class="alert alert-success p-4 rounded-4 shadow">
-                <i class="bi bi-check-circle-fill display-3 text-success d-block mb-2"></i>
-                <h3 class="fw-bold text-success">¡ACCESO PERMITIDO!</h3>
-                <p class="mb-0 text-dark">Ticket <strong>{{ id_ticket }}</strong> validado y marcado como <strong>UTILIZADO</strong>.</p>
+            <!-- Botones de escaneo -->
+            <div class="d-flex gap-2 flex-wrap mb-3">
+
+                <button
+                    type="button"
+                    id="btn-cam"
+                    class="btn btn-primary fw-bold">
+                    <i class="bi bi-camera-video me-1"></i>
+                    Activar cámara
+                </button>
+
+                <label class="btn btn-outline-primary mb-0 fw-bold">
+                    <i class="bi bi-image me-1"></i>
+                    Escanear imagen
+
+                    <input
+                        type="file"
+                        id="img-qr"
+                        accept="image/*"
+                        hidden>
+                </label>
+
             </div>
-            {% elif estado == 'rechazado' %}
-            <div class="alert alert-danger p-4 rounded-4 shadow">
-                <i class="bi bi-x-circle-fill display-3 text-danger d-block mb-2"></i>
-                <h3 class="fw-bold text-danger">¡ACCESO RECHAZADO!</h3>
-                <p class="mb-0 text-dark">El ticket ya fue utilizado previamente o no existe.</p>
+
+            <div id="qr-oculto" style="display: none;"></div>
+
+            <!-- Entrada manual -->
+            <label for="carnet" class="form-label fw-semibold">
+                O captura manual: carnet o correo
+            </label>
+
+            <input
+                id="carnet"
+                class="form-control scan-input mb-1"
+                autocomplete="off"
+                placeholder="Ej. 2026-0001">
+
+            <div id="sugerencias" class="list-group mt-1"></div>
+
+            <!-- Resultado del registro -->
+            <div id="resultado" class="mt-3"></div>
+
+            <!-- Contadores -->
+            <div class="row text-center mt-3 pt-3 border-top">
+
+                <div class="col">
+                    <div
+                        class="h2 mb-0 text-primary fw-bold"
+                        id="c-ing">0</div>
+                    <small class="text-muted">Ingresados</small>
+                </div>
+
+                <div class="col">
+                    <div
+                        class="h2 mb-0 text-success fw-bold"
+                        id="c-rest">0</div>
+                    <small class="text-muted">Cupos libres</small>
+                </div>
+
+                <div class="col">
+                    <div
+                        class="h2 mb-0 fw-bold"
+                        id="c-cap">0</div>
+                    <small class="text-muted">Capacidad</small>
+                </div>
+
             </div>
-            {% endif %}
+
         </div>
     </div>
+
+    <!-- Tabla de asistentes -->
+    <div class="col-lg-7">
+
+        <div class="card card-soft p-3 border-0 shadow-sm rounded-4">
+
+            <h5 class="fw-bold mb-3">
+                <i class="bi bi-people-fill text-primary me-2"></i>
+                Asistentes registrados
+            </h5>
+
+            <div
+                class="table-responsive"
+                style="max-height: 520px; overflow: auto;">
+
+                <table class="table table-sm table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                        <tr>
+                            <th>Hora</th>
+                            <th>Carnet</th>
+                            <th>Nombre</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="lista">
+                        <tr>
+                            <td colspan="3"
+                                class="text-muted text-center py-3">
+                                Cargando asistentes...
+                            </td>
+                        </tr>
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+
 </div>
+
+{% endif %}
+
 {% endblock %}
+
+
+{% block scripts %}
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+
+const esc = valor => String(valor ?? "").replace(
+    /[&<>"']/g,
+    caracter => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[caracter]
+);
+
+
+// Sonido para indicar el resultado
+function beep(ok) {
+    try {
+        const AudioCtx =
+            window.AudioContext || window.webkitAudioContext;
+
+        if (!AudioCtx) return;
+
+        const audio = new AudioCtx();
+        const oscilador = audio.createOscillator();
+        const volumen = audio.createGain();
+
+        oscilador.frequency.value = ok ? 880 : 220;
+        volumen.gain.value = 0.1;
+
+        oscilador.connect(volumen);
+        volumen.connect(audio.destination);
+
+        oscilador.start();
+        oscilador.stop(audio.currentTime + (ok ? 0.12 : 0.35));
+
+        oscilador.onended = () => audio.close();
+
+    } catch (error) {
+        console.warn("No se pudo reproducir el sonido:", error);
+    }
+}
+
+
+// Cargar la lista de ingresos y los contadores
+async function cargar() {
+    const evento = $("evento");
+
+    if (!evento) return;
+
+    try {
+        const respuesta = await fetch(
+            "/api/ingresos/" + encodeURIComponent(evento.value)
+        );
+
+        if (!respuesta.ok) {
+            throw new Error("No se pudieron consultar los ingresos.");
+        }
+
+        const datos = await respuesta.json();
+        const ingresos = datos.ingresos || [];
+
+        $("lista").innerHTML = ingresos.map(ingreso => {
+            const hora = ingreso.fecha_hora
+                ? ingreso.fecha_hora.slice(11, 16)
+                : "--:--";
+
+            return `
+                <tr>
+                    <td>${esc(hora)}</td>
+                    <td>${esc(ingreso.carnet)}</td>
+                    <td>${esc(ingreso.nombre)}</td>
+                </tr>
+            `;
+        }).join("") || `
+            <tr>
+                <td colspan="3"
+                    class="text-muted text-center py-3">
+                    Sin ingresos todavía
+                </td>
+            </tr>
+        `;
+
+        if (datos.evento) {
+            $("c-ing").textContent =
+                datos.evento.ingresados ?? 0;
+
+            $("c-rest").textContent =
+                datos.evento.restantes ?? 0;
+
+            $("c-cap").textContent =
+                datos.evento.cupos_int ?? 0;
+        }
+
+    } catch (error) {
+        console.error("Error al cargar los ingresos:", error);
+
+        $("lista").innerHTML = `
+            <tr>
+                <td colspan="3"
+                    class="text-danger text-center py-3">
+                    No se pudo cargar la lista de asistentes.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+
+// Enviar el carnet, correo o QR al servidor
+async function enviar(body) {
+    const evento = $("evento");
+
+    if (!evento) return;
+
+    try {
+        const respuesta = await fetch("/api/ingreso", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                evento_id: evento.value,
+                ...body
+            })
+        });
+
+        const datos = await respuesta.json();
+
+        const correcto = respuesta.ok && datos.ok;
+        const clase = correcto
+            ? "success"
+            : respuesta.status === 409
+                ? "warning"
+                : "danger";
+
+        $("resultado").innerHTML = `
+            <div class="alert alert-${clase} mb-0">
+                <i class="bi bi-${
+                    correcto
+                        ? "check-circle"
+                        : "exclamation-triangle"
+                } me-2"></i>
+                ${esc(datos.msg || "No se recibió un mensaje del servidor.")}
+            </div>
+        `;
+
+        beep(correcto);
+
+        if (correcto) {
+            $("carnet").value = "";
+            $("sugerencias").innerHTML = "";
+        }
+
+        await cargar();
+
+    } catch (error) {
+        console.error("Error al registrar el ingreso:", error);
+
+        $("resultado").innerHTML = `
+            <div class="alert alert-danger mb-0">
+                No se pudo conectar con el servidor.
+                Comprueba que la aplicación esté funcionando.
+            </div>
+        `;
+    }
+}
+
+
+// Control de la cámara
+let scanner = null;
+let ultimo = "";
+let ultimoT = 0;
+let procesandoQR = false;
+
+
+// Procesar un código QR leído
+async function alLeer(texto) {
+    const ahora = Date.now();
+
+    if (procesandoQR) return;
+
+    if (texto === ultimo && ahora - ultimoT < 4000) {
+        return;
+    }
+
+    ultimo = texto;
+    ultimoT = ahora;
+    procesandoQR = true;
+
+    try {
+        await enviar({ qr: texto });
+    } finally {
+        procesandoQR = false;
+    }
+}
+
+
+// Activar o detener la cámara
+const botonCamara = $("btn-cam");
+
+if (botonCamara) {
+    botonCamara.addEventListener("click", async () => {
+
+        if (scanner) {
+            try {
+                await scanner.stop();
+                scanner.clear();
+            } catch (error) {
+                console.warn("No se pudo detener la cámara:", error);
+            }
+
+            scanner = null;
+            $("visor").style.display = "none";
+
+            botonCamara.innerHTML = `
+                <i class="bi bi-camera-video me-1"></i>
+                Activar cámara
+            `;
+
+            return;
+        }
+
+        if (typeof Html5Qrcode === "undefined") {
+            $("resultado").innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    No se cargó la librería del lector QR.
+                    Revisa tu conexión a Internet.
+                </div>
+            `;
+            return;
+        }
+
+        $("visor").style.display = "block";
+
+        scanner = new Html5Qrcode("visor");
+
+        try {
+            await scanner.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 240, height: 240 }
+                },
+                alLeer
+            );
+
+            botonCamara.innerHTML = `
+                <i class="bi bi-camera-video-off me-1"></i>
+                Detener cámara
+            `;
+
+        } catch (error) {
+            console.error("Error al abrir la cámara:", error);
+
+            scanner = null;
+            $("visor").style.display = "none";
+
+            $("resultado").innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    No se pudo abrir la cámara.
+                    Verifica los permisos del navegador
+                    y que estés usando localhost o HTTPS.
+                </div>
+            `;
+        }
+    });
+}
+
+
+// Leer un QR desde una imagen
+const entradaImagen = $("img-qr");
+
+if (entradaImagen) {
+    entradaImagen.addEventListener("change", async evento => {
+        const archivo = evento.target.files[0];
+
+        if (!archivo) return;
+
+        if (typeof Html5Qrcode === "undefined") {
+            $("resultado").innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    No se cargó la librería del lector QR.
+                </div>
+            `;
+
+            entradaImagen.value = "";
+            return;
+        }
+
+        const lector = new Html5Qrcode("qr-oculto");
+
+        try {
+            const texto = await lector.scanFile(archivo, false);
+            await alLeer(texto);
+
+        } catch (error) {
+            console.error("Error al leer la imagen:", error);
+
+            $("resultado").innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    No se encontró un código QR válido en la imagen.
+                </div>
+            `;
+
+        } finally {
+            try {
+                lector.clear();
+            } catch (error) {
+                // El lector puede no haberse inicializado.
+            }
+
+            entradaImagen.value = "";
+        }
+    });
+}
+
+
+// Búsqueda y captura manual de carnet o correo
+const campoCarnet = $("carnet");
+
+if (campoCarnet) {
+
+    campoCarnet.addEventListener("keydown", evento => {
+        if (
+            evento.key === "Enter" &&
+            campoCarnet.value.trim()
+        ) {
+            evento.preventDefault();
+
+            enviar({
+                carnet: campoCarnet.value.trim()
+            });
+        }
+    });
+
+    let temporizadorBusqueda;
+
+    campoCarnet.addEventListener("input", evento => {
+        clearTimeout(temporizadorBusqueda);
+
+        temporizadorBusqueda = setTimeout(async () => {
+            const consulta = evento.target.value.trim();
+
+            if (consulta.length < 2) {
+                $("sugerencias").innerHTML = "";
+                return;
+            }
+
+            try {
+                const respuesta = await fetch(
+                    "/api/buscar?q=" +
+                    encodeURIComponent(consulta)
+                );
+
+                if (!respuesta.ok) {
+                    throw new Error("Falló la búsqueda.");
+                }
+
+                const personas = await respuesta.json();
+
+                $("sugerencias").innerHTML = personas.map(persona => `
+                    <button
+                        type="button"
+                        class="list-group-item list-group-item-action"
+                        data-c="${esc(persona.carnet)}">
+
+                        <b>${esc(persona.carnet)}</b>
+                        · ${esc(persona.nombre)}
+                    </button>
+                `).join("");
+
+            } catch (error) {
+                console.error("Error en la búsqueda:", error);
+                $("sugerencias").innerHTML = "";
+            }
+
+        }, 250);
+    });
+
+
+    // Seleccionar una sugerencia
+    $("sugerencias").addEventListener("click", evento => {
+        const boton = evento.target.closest("button");
+
+        if (boton) {
+            enviar({
+                carnet: boton.dataset.c
+            });
+        }
+    });
+}
+
+
+// Cambiar de evento y actualizar la información
+const selectorEvento = $("evento");
+
+if (selectorEvento) {
+    selectorEvento.addEventListener("change", () => {
+        $("resultado").innerHTML = "";
+        cargar();
+    });
+
+    cargar();
+}
+
+</script>
+
+{% endblock %}
+```

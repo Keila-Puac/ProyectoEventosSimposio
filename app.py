@@ -1,5 +1,6 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash
+from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import mysql.connector
 
 app = Flask(__name__)
@@ -15,7 +16,15 @@ def get_db_connection():
     )
 
 
-# Lista en memoria para eventos de demostración
+# Listas simuladas en memoria para demo
+PARTICIPANTES_DEMO = [
+    {'carnet': '2026-0001', 'nombre': 'Ana Lucía Gómez', 'correo': 'ana@correo.edu.gt'},
+    {'carnet': '2026-0002', 'nombre': 'Carlos Eduardo López', 'correo': 'carlos@correo.edu.gt'},
+    {'carnet': '2026-0003', 'nombre': 'María Fernanda Reyes', 'correo': 'maria@correo.edu.gt'}
+]
+
+INGRESOS_DEMO = []
+
 EVENTOS_DEMO = [
     {
         'id': 1,
@@ -23,55 +32,20 @@ EVENTOS_DEMO = [
         'fecha': '15/10/2026',
         'hora': '09:00 AM',
         'cupos_int': 50,
-        'restantes': 45,
-        'ingresados': 5,
+        'restantes': 50,
+        'ingresados': 0,
         'lugar': 'Auditorio A',
         'ponente': 'Ing. Carlos Mendoza',
-        'descripcion': 'Estrategias avanzadas para integrar modelos de lenguaje en arquitecturas en la nube.'
-    },
-    {
-        'id': 2,
-        'nombre': 'Ciberseguridad en Entornos Cloud',
-        'fecha': '15/10/2026',
-        'hora': '11:00 AM',
-        'cupos_int': 30,
-        'restantes': 12,
-        'ingresados': 18,
-        'lugar': 'Lab Redes 2',
-        'ponente': 'Dra. Sofía Ramos',
-        'descripcion': 'Principios de protección de datos, autenticación segura y mitigación de riesgos.'
-    },
-    {
-        'id': 3,
-        'nombre': 'Bases de Datos de Alto Rendimiento',
-        'fecha': '15/10/2026',
-        'hora': '02:00 PM',
-        'cupos_int': 40,
-        'restantes': 30,
-        'ingresados': 10,
-        'lugar': 'Auditorio Central',
-        'ponente': 'MSc. Roberto Gómez',
-        'descripcion': 'Optimización de consultas, indexación y escalabilidad con MySQL en producción.'
+        'descripcion': 'Estrategias avanzadas para integrar modelos de lenguaje en la nube.'
     }
 ]
 
 
-# 1. Eventos / Catálogo Principal (Con búsqueda)
 @app.route('/')
 def index():
-    query = request.args.get('q', '').strip().lower()
-    eventos_filtrados = EVENTOS_DEMO
-
-    if query:
-        eventos_filtrados = [
-            e for e in EVENTOS_DEMO
-            if query in e['nombre'].lower() or query in e['ponente'].lower() or query in e['lugar'].lower()
-        ]
-
-    return render_template('eventos.html', active='eventos', eventos=eventos_filtrados, q=query)
+    return render_template('eventos.html', active='eventos', eventos=EVENTOS_DEMO)
 
 
-# 2. Crear Evento
 @app.route('/crear-evento', methods=['GET', 'POST'])
 def nuevo_evento():
     formulario_datos = {}
@@ -79,7 +53,6 @@ def nuevo_evento():
         formulario_datos = request.form
         nuevo_id = len(EVENTOS_DEMO) + 1
         cupos = int(request.form.get('cupos', 50))
-
         nuevo = {
             'id': nuevo_id,
             'nombre': request.form.get('nombre'),
@@ -95,51 +68,86 @@ def nuevo_evento():
         EVENTOS_DEMO.append(nuevo)
         flash(f"Evento '{nuevo['nombre']}' creado correctamente.", 'success')
         return redirect(url_for('index'))
-
     return render_template('crear_evento.html', active='crear', f=formulario_datos)
 
 
-# 3. Eliminar Evento
-@app.route('/eliminar-evento/<int:eid>', methods=['POST'])
-def eliminar_evento(eid):
-    global EVENTOS_DEMO
-    EVENTOS_DEMO = [e for e in EVENTOS_DEMO if e['id'] != eid]
-    flash('Evento eliminado correctamente.', 'warning')
-    return redirect(url_for('index'))
-
-
-# 4. Base de Datos / Validar Pago
 @app.route('/datos', methods=['GET', 'POST'])
 def datos():
     if request.method == 'POST':
-        flash('Pago verificado correctamente.', 'success')
+        flash('Base de datos procesada correctamente.', 'success')
         return redirect(url_for('boleto'))
     return render_template('datos.html', active='datos')
 
 
-# 5. Lector QR / Control de Ingreso
-@app.route('/ingreso', methods=['GET', 'POST'])
+# Vista principal del Escáner/Lector QR
+@app.route('/ingreso')
 def ingreso():
-    estado = None
-    id_ticket = None
-    if request.method == 'POST':
-        id_ticket = request.form.get('id_ticket')
-        if id_ticket == "TCK-1001":
-            estado = 'permitido'
-            flash('¡Acceso Autorizado!', 'success')
-        else:
-            estado = 'rechazado'
-            flash('Acceso Denegado: Ticket inválido o utilizado', 'danger')
-
-    return render_template('ingreso.html', active='lector', estado=estado, id_ticket=id_ticket)
+    evento_sel = request.args.get('evento', type=int)
+    sel = evento_sel if evento_sel else (EVENTOS_DEMO[0]['id'] if EVENTOS_DEMO else None)
+    return render_template('ingreso.html', active='lector', eventos=EVENTOS_DEMO, total_part=len(PARTICIPANTES_DEMO),
+                           sel=sel)
 
 
-# 6. Vista de Mi Boleto
+# API: Obtener lista de ingresados por evento
+@app.route('/api/ingresos/<int:evento_id>')
+def api_ingresos(evento_id):
+    evento = next((e for e in EVENTOS_DEMO if e['id'] == evento_id), None)
+    ingresos = [i for i in INGRESOS_DEMO if i['evento_id'] == evento_id]
+    return jsonify({'evento': evento, 'ingresos': ingresos})
+
+
+# API: Procesar ingreso por carnet o QR
+@app.route('/api/ingreso', methods=['POST'])
+def api_procesar_ingreso():
+    data = request.get_json() or {}
+    evento_id = int(data.get('evento_id', 0))
+    carnet_o_qr = data.get('carnet') or data.get('qr', '')
+
+    # Extraer carné si viene en formato TCK-id-carnet
+    carnet = carnet_o_qr.split('-')[-1] if 'TCK' in carnet_o_qr else carnet_o_qr
+
+    evento = next((e for e in EVENTOS_DEMO if e['id'] == evento_id), None)
+    if not evento:
+        return jsonify({'ok': False, 'msg': 'Evento no encontrado'}), 404
+
+    # Verificar si ya ingresó
+    ya_ingresado = any(i for i in INGRESOS_DEMO if i['evento_id'] == evento_id and i['carnet'] == carnet)
+    if ya_ingresado:
+        return jsonify({'ok': False, 'msg': f'El carné {carnet} YA fue ingresado a este evento'}), 409
+
+    # Buscar participante
+    part = next((p for p in PARTICIPANTES_DEMO if p['carnet'] == carnet or p['correo'] == carnet), None)
+    nombre = part['nombre'] if part else f'Participante ({carnet})'
+
+    # Registrar ingreso
+    ahora = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    INGRESOS_DEMO.insert(0, {
+        'evento_id': evento_id,
+        'carnet': carnet,
+        'nombre': nombre,
+        'fecha_hora': ahora
+    })
+
+    evento['ingresados'] += 1
+    evento['restantes'] = max(0, evento['cupos_int'] - evento['ingresados'])
+
+    return jsonify({'ok': True, 'msg': f'Acceso PERMITIDO: {nombre}'})
+
+
+# API: Búsqueda dinámica / Autocompletado
+@app.route('/api/buscar')
+def api_buscar():
+    q = request.args.get('q', '').strip().lower()
+    if not q:
+        return jsonify([])
+    res = [p for p in PARTICIPANTES_DEMO if q in p['carnet'].lower() or q in p['nombre'].lower()]
+    return jsonify(res[:5])
+
+
 @app.route('/boleto', methods=['GET', 'POST'])
 def boleto():
     estudiante = None
     boletos_lista = []
-
     if request.method == 'POST':
         carnet = request.form.get('carnet')
         estudiante = {'nombre': 'Estudiante Simposio', 'carnet': carnet}
@@ -152,11 +160,9 @@ def boleto():
             'ya_ingreso': False,
             'sig': 'firma_demo'
         }]
-
     return render_template('boleto.html', active='boleto', est=estudiante, boletos=boletos_lista)
 
 
-# 7. QR y PDF Helpers
 @app.route('/boleto/qr/<int:eid>/<carnet>/<sig>')
 def boleto_qr(eid, carnet, sig):
     return redirect(f"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=TCK-{eid}-{carnet}")
@@ -164,7 +170,7 @@ def boleto_qr(eid, carnet, sig):
 
 @app.route('/boleto/pdf/<int:eid>/<carnet>/<sig>')
 def boleto_pdf(eid, carnet, sig):
-    flash('Descargando archivo PDF del ticket...', 'info')
+    flash('Descargando archivo PDF...', 'info')
     return redirect(url_for('boleto'))
 
 
