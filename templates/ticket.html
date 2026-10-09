@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrada Digital - XIX Simposio de Ingeniería</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .ticket-card {
+            border: 2px dashed #0d6efd;
+            border-radius: 20px;
+            background: #ffffff;
+        }
+        .qr-box {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body class="bg-light py-5">
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+
+                <!-- Tarjeta del Ticket -->
+                <div class="card ticket-card shadow-lg p-4 text-center">
+                    <div class="card-body">
+                        <span class="badge bg-success mb-2 px-3 py-2 fw-semibold">
+                            <i class="bi bi-check-circle-fill me-1"></i>Pago Validado
+                        </span>
+
+                        <h4 class="fw-bold text-dark mt-2">XIX Simposio de Ingeniería</h4>
+                        <p class="text-muted small">"De la gestión inteligente a la acción en ingeniería"</p>
+
+                        <hr class="my-3">
+
+                        <!-- Datos del Estudiante -->
+                        <div class="text-start mb-3 fs-6">
+                            <p class="mb-1"><strong>Estudiante:</strong> {{ nombre | default('Nombre Estudiante') }}</p>
+                            <p class="mb-1"><strong>Carné:</strong> {{ carne | default('20260000') }}</p>
+                            <p class="mb-1"><strong>No. Recibo:</strong> {{ no_recibo | default('REC-0000') }}</p>
+                            <p class="mb-0"><strong>No. Ticket:</strong> <span class="badge bg-primary fs-6">{{ id_ticket | default('TCK-1001') }}</span></p>
+                        </div>
+
+                        <!-- Generación de Código QR con API pública -->
+                        <div class="qr-box my-3">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ id_ticket | default('TCK-1001') }}"
+                                 alt="Código QR del Ticket" class="img-fluid">
+                            <p class="text-muted small mt-2 mb-0">Presenta este QR al ingresar</p>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-grid gap-2 mt-4">
+                            <button onclick="window.print()" class="btn btn-outline-primary fw-bold">
+                                <i class="bi bi-printer me-2"></i>Imprimir / Guardar en PDF
+                            </button>
+                            <a href="/" class="btn btn-link text-secondary text-decoration-none">Volver al Inicio</a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

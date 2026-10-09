@@ -14,32 +14,51 @@ def get_db_connection():
     )
 
 
+# 1. Landing Page
 @app.route('/')
 def index():
     return render_template('index.html')
 
 
+# 2. Formulario de Validación de Pagos
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
-        # Captura de los campos requeridos en el documento de la Fase 1
         carne = request.form.get('carne')
         no_recibo = request.form.get('no_recibo')
         nombre = request.form.get('nombre')
         email = request.form.get('email')
 
-        # Aquí irá la lógica de consulta a Alwaysdata para cruzar:
-        # 1. Reporte de Tesorería vs Listado Oficial de Estudiantes.
-        # 2. Asignación de Ticket disponible de la Coordinación.
-
-
-        # Por ahora enviamos una respuesta de confirmación a la plantilla
-        return render_template(
-            'registro.html',
-            mensaje_revision="Solicitud recibida. Verificando pago con el reporte de Tesorería..."
-        )
+        # Redirige a la vista del ticket pasando el ID asignado
+        return render_template('ticket.html', nombre=nombre, carne=carne, no_recibo=no_recibo, id_ticket="TCK-1001")
 
     return render_template('registro.html')
+
+
+# 3. Vista de Ticket con QR
+@app.route('/ticket/<id_ticket>')
+def ticket(id_ticket):
+    return render_template('ticket.html', id_ticket=id_ticket)
+
+
+# 4. Panel de Escaneo (Personal de Ingreso)
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+
+
+# 5. Lógica de Validación de Ticket (AFD)
+@app.route('/validar-ingreso', methods=['POST'])
+def validar_ingreso():
+    id_ticket = request.form.get('id_ticket')
+
+    # Simulación de validación (Reemplazar con consulta a Alwaysdata):
+    # Si el ticket no ha sido usado -> Permitido y cambia estado a 'Utilizado'
+    if id_ticket == "TCK-1001":
+        estudiante_demo = {"nombre": "Juan Pérez", "carne": "20260123", "id_ticket": id_ticket}
+        return render_template('admin.html', estado='permitido', estudiante=estudiante_demo)
+    else:
+        return render_template('admin.html', estado='rechazado')
 
 
 if __name__ == '__main__':
