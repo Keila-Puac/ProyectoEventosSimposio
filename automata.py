@@ -32,8 +32,8 @@ from rapidfuzz import process, fuzz
 # ---------------------------------------------------------------------------
 UMBRAL_ALTO = 95
 UMBRAL_MIN = 75
-MONTO_CORRECTO = Decimal("300.00")
-HOJA_PAGOS = "Pruebas Psicométricas"
+MONTO_CORRECTO = Decimal(os.getenv("SIMPOSIO_MONTO_CORRECTO", "280.00"))
+HOJA_PAGOS = os.getenv("SIMPOSIO_HOJA_PAGOS", "Pruebas Psicometrícas")
 COLUMNA_RECIBO = "No. recibo"
 COLUMNA_NOMBRE_PAGO = "Nombre"
 COLUMNA_NOMBRE_ESTUDIANTE = "Nombre"
@@ -45,10 +45,11 @@ ESPERA_REINTENTO = 1.5
 # Completar con la configuración de tu servidor. No pongas credenciales en el código
 # que vayas a compartir o subir a un repositorio.
 MYSQL_CONFIG: dict[str, Any] = {
-    "host": os.getenv("SIMPOSIO_DB_HOST", "localhost"),
-    "user": os.getenv("SIMPOSIO_DB_USER", "root"),
-    "password": os.getenv("SIMPOSIO_DB_PASSWORD", ""),
-    "database": os.getenv("SIMPOSIO_DB_NAME", "simposio"),
+    "host": os.getenv("SIMPOSIO_DB_HOST", os.getenv("DB_HOST", "localhost")),
+    "user": os.getenv("SIMPOSIO_DB_USER", os.getenv("DB_USER", "root")),
+    "password": os.getenv("SIMPOSIO_DB_PASSWORD", os.getenv("DB_PASSWORD", "")),
+    "database": os.getenv("SIMPOSIO_DB_NAME", os.getenv("DB_NAME", "simposio")),
+    "port": int(os.getenv("SIMPOSIO_DB_PORT", os.getenv("DB_PORT", "3306"))),
     "autocommit": False,
 }
 
@@ -68,6 +69,52 @@ def normalizar(texto: Any) -> str:
     texto = unicodedata.normalize("NFD", str(texto).lower())
     texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
     return " ".join(texto.split())
+
+
+def normalizar_columna(texto: Any) -> str:
+    return normalizar(texto).replace(".", "").replace("°", "").replace(" ", "_")
+
+
+def _buscar_hoja(nombre_esperado: str, hojas: list[str]) -> str:
+    esperado = normalizar(nombre_esperado)
+    for hoja in hojas:
+        if normalizar(hoja) == esperado:
+            return hoja
+    for hoja in hojas:
+        if "pruebas" in normalizar(hoja) or "tesoreria" in normalizar(hoja):
+            return hoja
+    return hojas[0]
+
+
+def _leer_excel_con_encabezado(ruta_excel: str, sheet_name: Optional[str] = None) -> pd.DataFrame:
+    hojas = pd.ExcelFile(ruta_excel).sheet_names
+    hoja = _buscar_hoja(sheet_name or hojas[0], hojas)
+    crudo = pd.read_excel(ruta_excel, sheet_name=hoja, header=None, dtype=str).fillna("")
+    fila_encabezado = 0
+    for indice, fila in crudo.iterrows():
+        columnas = {normalizar_columna(valor) for valor in fila.tolist()}
+        tiene_nombre = "nombre" in columnas
+        tiene_recibo = any("recibo" in columna for columna in columnas)
+        if tiene_nombre and (tiene_recibo or "carnet" in columnas):
+            fila_encabezado = int(indice)
+            break
+
+    df = pd.read_excel(ruta_excel, sheet_name=hoja, header=fila_encabezado, dtype=str).fillna("")
+    df.columns = [str(columna).strip() for columna in df.columns]
+    return df.loc[:, [col for col in df.columns if col and not str(col).startswith("Unnamed")]]
+
+
+def _resolver_columna(columnas: list[str], principal: str, alias: tuple[str, ...]) -> str:
+    mapa = {normalizar_columna(columna): columna for columna in columnas}
+    for candidato in (principal, *alias):
+        clave = normalizar_columna(candidato)
+        if clave in mapa:
+            return mapa[clave]
+    for columna in columnas:
+        clave = normalizar_columna(columna)
+        if any(normalizar_columna(candidato) in clave for candidato in (principal, *alias)):
+            return columna
+    raise ValueError(f"Falta la columna '{principal}'. Columnas encontradas: {', '.join(columnas)}")
 
 
 def generar_hash(texto: str) -> str:
@@ -201,23 +248,27 @@ class AFNDValidacion(Automata):
         super().__init__("q0")
         self.progreso = progreso or Progreso()
         try:
-            self.df_pagos = pd.read_excel(ruta_excel_pagos, sheet_name=HOJA_PAGOS, dtype=str).fillna("")
-            self.df_estudiantes = pd.read_excel(ruta_excel_estudiantes, dtype=str).fillna("")
+            self.df_pagos = _leer_excel_con_encabezado(ruta_excel_pagos, HOJA_PAGOS)
+            self.df_estudiantes = _leer_excel_con_encabezado(ruta_excel_estudiantes)
         except FileNotFoundError as exc:
             raise FileNotFoundError(f"No se encontró uno de los Excel: {exc}") from exc
         except ValueError as exc:
             raise ValueError(f"No se pudo leer la hoja/estructura de Excel: {exc}") from exc
 
-        for columna in (COLUMNA_RECIBO, COLUMNA_NOMBRE_PAGO):
-            if columna not in self.df_pagos.columns:
-                raise ValueError(f"Falta la columna '{columna}' en el Excel de pagos.")
-        for columna in (COLUMNA_NOMBRE_ESTUDIANTE, COLUMNA_CARNET):
-            if columna not in self.df_estudiantes.columns:
-                raise ValueError(f"Falta la columna '{columna}' en el Excel de estudiantes.")
+        self.columna_recibo = _resolver_columna(list(self.df_pagos.columns), COLUMNA_RECIBO, ("Número de Recibo", "Numero de Recibo", "Recibo"))
+        self.columna_nombre_pago = _resolver_columna(list(self.df_pagos.columns), COLUMNA_NOMBRE_PAGO, ("Nombre pagador", "Estudiante"))
+        self.columna_monto = None
+        try:
+            self.columna_monto = _resolver_columna(list(self.df_pagos.columns), "Monto", ("Importe", "Valor"))
+        except ValueError:
+            pass
+
+        self.columna_nombre_estudiante = _resolver_columna(list(self.df_estudiantes.columns), COLUMNA_NOMBRE_ESTUDIANTE, ("Nombre completo", "Estudiante"))
+        self.columna_carnet = _resolver_columna(list(self.df_estudiantes.columns), COLUMNA_CARNET, ("Carne", "Carné"))
 
         self.pagos = self.df_pagos.to_dict("records")
         self.estudiantes = self.df_estudiantes.to_dict("records")
-        self.nombres_oficiales = [normalizar(e.get(COLUMNA_NOMBRE_ESTUDIANTE, "")) for e in self.estudiantes]
+        self.nombres_oficiales = [normalizar(e.get(self.columna_nombre_estudiante, "")) for e in self.estudiantes]
         self.pendientes_manual = self.progreso.datos["pendientes_manual"]
 
     def clasificar_similitud(self, candidatos: list[tuple]) -> str:
@@ -233,7 +284,7 @@ class AFNDValidacion(Automata):
         return "S3"
 
     def _buscar_pago(self, no_recibo: str) -> Optional[dict[str, Any]]:
-        coincidencias = self.df_pagos[self.df_pagos[COLUMNA_RECIBO].astype(str).str.strip() == no_recibo]
+        coincidencias = self.df_pagos[self.df_pagos[self.columna_recibo].astype(str).str.strip() == no_recibo]
         return None if coincidencias.empty else coincidencias.iloc[0].to_dict()
 
     def procesar_pago(self, datos_ingresados: dict[str, Any], recibos_ya_procesados: Optional[set[str]] = None) -> dict[str, Any]:
@@ -257,8 +308,8 @@ class AFNDValidacion(Automata):
             return {"estado": "Pago no localizado", "traza": self.traza, "estudiante": None, "no_recibo": no_recibo}
 
         # Si el Excel incluye monto, comprobarlo. Si no existe, no inventar un valor.
-        if "Monto" in pago or "monto" in pago:
-            monto = _decimal(pago.get("Monto", pago.get("monto")))
+        if self.columna_monto:
+            monto = _decimal(pago.get(self.columna_monto))
             if monto != MONTO_CORRECTO:
                 self.leer("X")
                 resultado = {"estado": "Monto incorrecto", "traza": self.traza, "estudiante": None, "no_recibo": no_recibo}
@@ -266,26 +317,26 @@ class AFNDValidacion(Automata):
                 return resultado
 
         self.leer("N")
-        nombre_pago = normalizar(pago.get(COLUMNA_NOMBRE_PAGO, ""))
+        nombre_pago = normalizar(pago.get(self.columna_nombre_pago, ""))
         self.leer("C")
         self.leer("C")
         resultados = process.extract(nombre_pago, self.nombres_oficiales, scorer=fuzz.WRatio, limit=3)
         # Excluir candidatos cuyo carnet ya fue aceptado por el propio sistema.
         carnets_aceptados = {str(v.get("carnet")) for v in self.progreso.datos["procesados"].values() if v.get("resultado") in {"PAGO_VALIDADO", "MANUAL_ACEPTADO"} and v.get("carnet")}
-        resultados = [r for r in resultados if str(self.estudiantes[r[2]].get(COLUMNA_CARNET, "")) not in carnets_aceptados]
+        resultados = [r for r in resultados if str(self.estudiantes[r[2]].get(self.columna_carnet, "")) not in carnets_aceptados]
         simbolo = self.clasificar_similitud(resultados)
         self.leer(simbolo)
 
         if simbolo == "S1":
             self.leer("V")
             estudiante = self.estudiantes[resultados[0][2]]
-            self.progreso.registrar(no_recibo, "PAGO_VALIDADO", str(estudiante.get(COLUMNA_CARNET, "")), self.traza,
-                                    nombre=estudiante.get(COLUMNA_NOMBRE_ESTUDIANTE, ""))
+            self.progreso.registrar(no_recibo, "PAGO_VALIDADO", str(estudiante.get(self.columna_carnet, "")), self.traza,
+                                    nombre=estudiante.get(self.columna_nombre_estudiante, ""))
             return {"estado": "Pago validado", "traza": self.traza, "estudiante": estudiante, "no_recibo": no_recibo}
 
         self.leer("M")
         candidatos = [{"indice": int(idx), "nombre": str(nombre), "puntaje": float(puntaje),
-                       "carnet": str(self.estudiantes[idx].get(COLUMNA_CARNET, ""))}
+                       "carnet": str(self.estudiantes[idx].get(self.columna_carnet, ""))}
                       for nombre, puntaje, idx in resultados]
         revision = {"no_recibo": no_recibo, "nombre_pagador": nombre_pago, "simbolo": simbolo,
                     "candidatos": candidatos, "traza": self.traza,
@@ -311,7 +362,7 @@ class AFNDValidacion(Automata):
             if idx_estudiante is None or not 0 <= idx_estudiante < len(self.estudiantes):
                 return {"ok": False, "error": "Índice de estudiante inválido."}
             estudiante = self.estudiantes[idx_estudiante]
-            carnet = str(estudiante.get(COLUMNA_CARNET, ""))
+            carnet = str(estudiante.get(self.columna_carnet, ""))
             if not carnet:
                 return {"ok": False, "error": "El estudiante seleccionado no tiene carnet."}
             if any(str(v.get("carnet")) == carnet and v.get("resultado") in {"PAGO_VALIDADO", "MANUAL_ACEPTADO"}
@@ -322,7 +373,7 @@ class AFNDValidacion(Automata):
             self.progreso.datos["pendientes_manual"].pop(clave, None)
             self.progreso.datos["procesados"][clave] = {
                 "resultado": "MANUAL_ACEPTADO", "carnet": carnet, "traza": self.traza,
-                "fecha": ahora, "nombre": estudiante.get(COLUMNA_NOMBRE_ESTUDIANTE, "")
+                "fecha": ahora, "nombre": estudiante.get(self.columna_nombre_estudiante, "")
             }
             self.progreso.guardar()
             return {"ok": True, "estado": "MANUAL_ACEPTADO", "estudiante": estudiante, "no_recibo": clave, "traza": self.traza}

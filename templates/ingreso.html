@@ -22,13 +22,16 @@
             <div class="alert alert-success p-4 rounded-4 shadow">
                 <i class="bi bi-check-circle-fill display-3 text-success d-block mb-2"></i>
                 <h3 class="fw-bold text-success">¡ACCESO PERMITIDO!</h3>
-                <p class="mb-0 text-dark">Ticket <strong>{{ id_ticket }}</strong> validado y marcado como <strong>UTILIZADO</strong>.</p>
+                <p class="mb-1 text-dark">Ticket validado y marcado como <strong>UTILIZADO</strong>.</p>
+                {% if resultado %}
+                <p class="mb-0 text-dark"><strong>{{ resultado.nombre }}</strong> · {{ resultado.carnet }}</p>
+                {% endif %}
             </div>
             {% elif estado == 'rechazado' %}
             <div class="alert alert-danger p-4 rounded-4 shadow">
                 <i class="bi bi-x-circle-fill display-3 text-danger d-block mb-2"></i>
                 <h3 class="fw-bold text-danger">¡ACCESO RECHAZADO!</h3>
-                <p class="mb-0 text-dark">El ticket ya fue utilizado previamente o no existe.</p>
+                <p class="mb-0 text-dark">{{ resultado.mensaje if resultado else 'El ticket ya fue utilizado previamente o no existe.' }}</p>
             </div>
             {% endif %}
         </div>

@@ -33,10 +33,15 @@
         {% endif %}
       </div>
       <div class="card-body text-center">
-        <img class="img-fluid my-2" style="max-width:220px" alt="QR" src="{{ url_for('boleto_qr', eid=b.id, carnet=est.carnet, sig=b.sig) }}">
+        <img class="img-fluid my-2" style="max-width:220px" alt="QR" src="{{ b.qr_url or url_for('boleto_qr', eid=b.id, carnet=est.carnet, sig=b.sig) }}">
         <h5 class="fw-bold mt-2">{{ b.nombre }}</h5>
         <div class="text-muted small"><i class="bi bi-clock me-1"></i>{{ b.fecha }} · {{ b.hora }}</div>
         <div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ b.lugar or '—' }}</div>
+        {% if b.codigo_qr %}
+          <div class="alert alert-light border small mt-3 text-break mb-0">
+            <span class="fw-semibold">Código:</span> {{ b.codigo_qr }}
+          </div>
+        {% endif %}
         <a class="btn btn-outline-primary btn-sm mt-3" href="{{ url_for('boleto_pdf', eid=b.id, carnet=est.carnet, sig=b.sig) }}"><i class="bi bi-download me-1"></i>Descargar PDF</a>
       </div>
     </div>

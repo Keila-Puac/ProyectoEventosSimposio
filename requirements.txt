@@ -1,6 +1,12 @@
 flask
 gunicorn
 mysql-connector-python
+pandas
+openpyxl
+rapidfuzz
 reportlab
 sendgrid
 python-dotenv
+qrcode
+pillow
+requests
