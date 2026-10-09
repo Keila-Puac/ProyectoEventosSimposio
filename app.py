@@ -32,6 +32,7 @@ def registro():
         # 1. Reporte de Tesorería vs Listado Oficial de Estudiantes.
         # 2. Asignación de Ticket disponible de la Coordinación.
 
+
         # Por ahora enviamos una respuesta de confirmación a la plantilla
         return render_template(
             'registro.html',
