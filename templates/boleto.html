@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title h2 mb-4">Mi boleto</h1>
+
+{% if not est %}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-5">
+    <form method="post" class="card card-soft p-4 shadow-sm border-0">
+      <p class="text-muted">Ingresa tu carnet y el correo con el que te inscribiste para ver tus boletos con código QR.</p>
+      <label class="form-label fw-semibold">Carnet</label>
+      <input class="form-control mb-3" name="carnet" placeholder="2026-0001" required autofocus>
+      <label class="form-label fw-semibold">Correo</label>
+      <input class="form-control mb-3" type="email" name="correo" placeholder="tu@correo.edu.gt" required>
+      <button class="btn btn-primary fw-bold"><i class="bi bi-ticket-perforated me-1"></i>Ver mi boleto</button>
+    </form>
+  </div>
+</div>
+{% else %}
+<p class="lead mb-4">Hola, <b>{{ est.nombre }}</b> <span class="text-muted">· {{ est.carnet }}</span></p>
+
+{% if not boletos %}
+  <div class="alert alert-info">Todavía no hay eventos disponibles.</div>
+{% endif %}
+
+<div class="row g-4">
+{% for b in boletos %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card card-soft h-100 overflow-hidden border-0 shadow-sm">
+      <div class="px-3 py-2 text-white bg-dark d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-ticket-perforated me-1"></i>Boleto de acceso</span>
+        {% if b.ya_ingreso %}
+          <span class="badge bg-success">Ya ingresaste</span>
+        {% endif %}
+      </div>
+      <div class="card-body text-center">
+        <img class="img-fluid my-2" style="max-width:220px" alt="QR" src="{{ url_for('boleto_qr', eid=b.id, carnet=est.carnet, sig=b.sig) }}">
+        <h5 class="fw-bold mt-2">{{ b.nombre }}</h5>
+        <div class="text-muted small"><i class="bi bi-clock me-1"></i>{{ b.fecha }} · {{ b.hora }}</div>
+        <div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ b.lugar or '—' }}</div>
+        <a class="btn btn-outline-primary btn-sm mt-3" href="{{ url_for('boleto_pdf', eid=b.id, carnet=est.carnet, sig=b.sig) }}"><i class="bi bi-download me-1"></i>Descargar PDF</a>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+
+<a class="btn btn-link mt-3 text-decoration-none" href="{{ url_for('boleto') }}">Consultar otro carnet</a>
+{% endif %}
+{% endblock %}
