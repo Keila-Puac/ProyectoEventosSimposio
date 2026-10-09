@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Control de Acceso - Simposio 2026{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <h3 class="fw-bold mb-3"><i class="bi bi-qr-code-scan text-primary me-2"></i>Escaneo de Entradas</h3>
+
+            <div class="card bg-dark text-white border-0 shadow-sm p-3 mb-4">
+                <form action="/ingreso" method="POST">
+                    <label class="form-label">Ingresar o Escanear Código del Ticket</label>
+                    <div class="input-group">
+                        <input type="text" name="id_ticket" class="form-control text-center fw-bold" placeholder="Ej. TCK-1001" autofocus required>
+                        <button class="btn btn-primary fw-bold" type="submit">Validar</button>
+                    </div>
+                </form>
+            </div>
+
+            {% if estado == 'permitido' %}
+            <div class="alert alert-success p-4 rounded-4 shadow">
+                <i class="bi bi-check-circle-fill display-3 text-success d-block mb-2"></i>
+                <h3 class="fw-bold text-success">¡ACCESO PERMITIDO!</h3>
+                <p class="mb-0 text-dark">Ticket <strong>{{ id_ticket }}</strong> validado y marcado como <strong>UTILIZADO</strong>.</p>
+            </div>
+            {% elif estado == 'rechazado' %}
+            <div class="alert alert-danger p-4 rounded-4 shadow">
+                <i class="bi bi-x-circle-fill display-3 text-danger d-block mb-2"></i>
+                <h3 class="fw-bold text-danger">¡ACCESO RECHAZADO!</h3>
+                <p class="mb-0 text-dark">El ticket ya fue utilizado previamente o no existe.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
