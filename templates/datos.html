@@ -10,21 +10,54 @@
                 <h4 class="fw-bold text-center mb-3"><i class="bi bi-file-earmark-excel text-primary me-2"></i>Validación de Pago</h4>
                 <p class="text-muted small text-center mb-4">Ingresa tus datos para cruzar el reporte de Tesorería con el listado oficial.</p>
 
-                <form action="{{ url_for('datos') }}" method="POST">
+                <form action="{{ url_for('datos') }}" method="POST" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Número de Carné</label>
-                        <input type="text" name="carne" class="form-control" placeholder="Ej. 20260123" required autofocus>
+                        <input type="text" name="carne" class="form-control" placeholder="Ej. 2026-0001" value="{{ form.carne if form else '' }}" required autofocus>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Número de Recibo</label>
-                        <input type="text" name="no_recibo" class="form-control" placeholder="Ej. REC-89452" required>
+                        <input type="text" name="no_recibo" class="form-control" placeholder="Ej. 25041654" value="{{ form.no_recibo if form else '' }}" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nombre Completo</label>
-                        <input type="text" name="nombre" class="form-control" placeholder="Tu nombre completo" required>
+                        <input type="text" name="nombre" class="form-control" placeholder="Tu nombre completo" value="{{ form.nombre if form else '' }}" required>
                     </div>
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm">Verificar e Ingresar</button>
+
+                    <div class="border rounded-3 p-3 bg-light">
+                        <div class="fw-semibold mb-2">Archivos Excel</div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted mb-1">Reporte de Tesorería</label>
+                            <input type="file" name="excel_pagos" class="form-control" accept=".xlsx,.xls">
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small text-muted mb-1">Listado de participantes</label>
+                            <input type="file" name="excel_estudiantes" class="form-control" accept=".xlsx,.xls">
+                        </div>
+                    </div>
+
+                    {% if resultado %}
+                    <div class="alert alert-secondary mt-3 mb-0 small">
+                        <div><strong>Resultado:</strong> {{ resultado.estado }}</div>
+                        {% if resultado.no_recibo %}<div><strong>Recibo:</strong> {{ resultado.no_recibo }}</div>{% endif %}
+                        {% if resultado.candidatos %}
+                        <div class="mt-2"><strong>Candidatos para revisión:</strong></div>
+                        <ul class="mb-0">
+                            {% for c in resultado.candidatos %}
+                            <li>{{ c.carnet }} · {{ c.nombre }} · {{ '%.1f'|format(c.puntaje) }}%</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" name="modo_archivos" value="subidos" class="btn btn-primary btn-lg fw-bold shadow-sm">
+                            Verificar con Excel subido
+                        </button>
+                        <button type="submit" name="modo_archivos" value="demo" class="btn btn-outline-secondary fw-bold">
+                            Usar prueba con archivos temporales
+                        </button>
                     </div>
                 </form>
             </div>

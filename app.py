@@ -1,10 +1,23 @@
 import os
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from pathlib import Path
+from urllib.parse import quote_plus
+
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 import mysql.connector
+from werkzeug.utils import secure_filename
+
+from automata import AFDTickets, AFNDValidacion, ARCHIVO_PROGRESO, Progreso
 
 app = Flask(__name__)
-app.secret_key = 'simposio_secret_key_2026'
+app.secret_key = os.getenv('SECRET_KEY', 'simposio_secret_key_2026')
+
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = BASE_DIR / 'uploads'
+PAGOS_EXCEL_DEMO = BASE_DIR / 'REPORTE DE TESORERIA- SIMPOSIO 2025.xlsx'
+ESTUDIANTES_EXCEL_DEMO = BASE_DIR / 'Participantes_Simposio_Datos_Simulados.xlsx'
+PROGRESO_AUTOMATA = Path(os.getenv('SIMPOSIO_PROGRESO', BASE_DIR / ARCHIVO_PROGRESO))
+EXTENSIONES_EXCEL = {'.xlsx', '.xls'}
 
 
 def get_db_connection():
@@ -14,6 +27,83 @@ def get_db_connection():
         password=os.getenv('DB_PASSWORD'),
         database=os.getenv('DB_NAME')
     )
+
+
+def archivo_excel_valido(archivo):
+    nombre = archivo.filename or ''
+    return Path(nombre).suffix.lower() in EXTENSIONES_EXCEL
+
+
+def guardar_excel_subido(archivo, prefijo):
+    if not archivo or not archivo.filename:
+        raise ValueError('Debes seleccionar ambos archivos Excel.')
+    if not archivo_excel_valido(archivo):
+        raise ValueError('Solo se permiten archivos .xlsx o .xls.')
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    marca = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    nombre_seguro = secure_filename(archivo.filename)
+    ruta = UPLOAD_DIR / f'{prefijo}_{marca}_{nombre_seguro}'
+    archivo.save(ruta)
+    return ruta
+
+
+def seleccionar_excels_desde_formulario():
+    modo = request.form.get('modo_archivos', 'subidos')
+    if modo == 'demo':
+        return PAGOS_EXCEL_DEMO, ESTUDIANTES_EXCEL_DEMO, 'archivos temporales del proyecto'
+
+    pagos = guardar_excel_subido(request.files.get('excel_pagos'), 'pagos')
+    estudiantes = guardar_excel_subido(request.files.get('excel_estudiantes'), 'estudiantes')
+    return pagos, estudiantes, 'archivos subidos'
+
+
+def crear_validador_pagos(ruta_pagos, ruta_estudiantes):
+    return AFNDValidacion(str(ruta_pagos), str(ruta_estudiantes), Progreso(PROGRESO_AUTOMATA))
+
+
+def sincronizar_participantes_demo(validador):
+    PARTICIPANTES_DEMO[:] = []
+    for estudiante in validador.estudiantes:
+        carnet = str(estudiante.get(validador.columna_carnet, '')).strip()
+        nombre = str(estudiante.get(validador.columna_nombre_estudiante, '')).strip()
+        correo = str(estudiante.get('Correo', estudiante.get('correo', ''))).strip()
+        if carnet and nombre:
+            PARTICIPANTES_DEMO.append({'carnet': carnet, 'nombre': nombre, 'correo': correo})
+
+
+def nombre_estudiante(estudiante):
+    return estudiante.get('Nombre') or estudiante.get('nombre_completo') or estudiante.get('nombre') or 'Estudiante Simposio'
+
+
+def carnet_estudiante(estudiante):
+    return estudiante.get('Carnet') or estudiante.get('carnet') or ''
+
+
+def crear_boleto_visual(estudiante, codigo_qr):
+    carnet = carnet_estudiante(estudiante)
+    return {
+        'estudiante': {'nombre': nombre_estudiante(estudiante), 'carnet': carnet},
+        'boletos': [{
+            'id': 1,
+            'nombre': 'Conferencia Magistral Simposio 2026',
+            'fecha': '15 Octubre 2026',
+            'hora': '09:00 AM',
+            'lugar': 'Auditorio Central',
+            'ya_ingreso': False,
+            'sig': 'automata',
+            'codigo_qr': codigo_qr,
+            'qr_url': f'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={quote_plus(codigo_qr)}'
+        }]
+    }
+
+
+def emitir_ticket(resultado_pago):
+    tickets = AFDTickets()
+    try:
+        return tickets.emitir_para_aceptado(resultado_pago)
+    finally:
+        tickets.cerrar_conexion()
 
 
 # Listas simuladas en memoria para demo
@@ -100,8 +190,49 @@ def eliminar_evento(eid):
 @app.route('/datos', methods=['GET', 'POST'])
 def datos():
     if request.method == 'POST':
-        flash('Base de datos procesada correctamente.', 'success')
-        return redirect(url_for('boleto'))
+        formulario = {
+            'carne': request.form.get('carne', '').strip(),
+            'carnet': request.form.get('carne', '').strip(),
+            'no_recibo': request.form.get('no_recibo', '').strip(),
+            'nombre': request.form.get('nombre', '').strip()
+        }
+
+        try:
+            ruta_pagos, ruta_estudiantes, origen = seleccionar_excels_desde_formulario()
+            validador = crear_validador_pagos(ruta_pagos, ruta_estudiantes)
+            sincronizar_participantes_demo(validador)
+            resultado_pago = validador.procesar_pago(formulario)
+            if resultado_pago.get('estudiante'):
+                estudiante = resultado_pago['estudiante']
+                estudiante.setdefault('Carnet', estudiante.get(validador.columna_carnet, ''))
+                estudiante.setdefault('Nombre', estudiante.get(validador.columna_nombre_estudiante, ''))
+        except Exception as exc:
+            flash(f'No se pudo procesar el Excel: {exc}', 'danger')
+            return render_template('datos.html', active='datos', form=formulario)
+
+        if resultado_pago.get('estado') == 'Pago validado':
+            try:
+                resultado_ticket = emitir_ticket(resultado_pago)
+            except Exception as exc:
+                flash(f'Pago validado con {origen}, pero la base de tickets no respondió: {exc}', 'warning')
+                return render_template('datos.html', active='datos', resultado=resultado_pago, form=formulario)
+
+            if resultado_ticket.get('ok'):
+                boleto = crear_boleto_visual(resultado_pago['estudiante'], resultado_ticket['codigo_qr'])
+                session['ultimo_boleto'] = boleto
+                flash(f'Pago validado con {origen} y boleto generado correctamente.', 'success')
+                return render_template('boleto.html', active='boleto', est=boleto['estudiante'], boletos=boleto['boletos'])
+
+            flash(f"Pago validado con {origen}, pero no se pudo generar el ticket: {resultado_ticket.get('mensaje')}", 'warning')
+            return render_template('datos.html', active='datos', resultado=resultado_pago, form=formulario)
+
+        if resultado_pago.get('estado') == 'Registro enviado a revisión manual':
+            flash(f'Los Excel fueron procesados desde {origen}, pero el pago requiere revisión manual.', 'warning')
+        elif resultado_pago.get('estado') == 'Registro pendiente de revisión manual':
+            flash('Este recibo ya está pendiente de revisión manual.', 'info')
+        else:
+            flash(resultado_pago.get('estado', 'Pago no validado.'), 'danger')
+        return render_template('datos.html', active='datos', resultado=resultado_pago, form=formulario)
     return render_template('datos.html', active='datos')
 
 
@@ -176,16 +307,13 @@ def boleto():
     boletos_lista = []
     if request.method == 'POST':
         carnet = request.form.get('carnet')
-        estudiante = {'nombre': 'Estudiante Simposio', 'carnet': carnet}
-        boletos_lista = [{
-            'id': 1,
-            'nombre': 'Conferencia Magistral Simposio 2026',
-            'fecha': '15 Octubre 2026',
-            'hora': '09:00 AM',
-            'lugar': 'Auditorio Central',
-            'ya_ingreso': False,
-            'sig': 'firma_demo'
-        }]
+        ultimo_boleto = session.get('ultimo_boleto')
+        if ultimo_boleto and ultimo_boleto.get('estudiante', {}).get('carnet') == carnet:
+            estudiante = ultimo_boleto['estudiante']
+            boletos_lista = ultimo_boleto['boletos']
+        else:
+            flash('Por seguridad el QR solo se muestra justo después de validar el pago.', 'info')
+            estudiante = {'nombre': 'Consulta de boleto', 'carnet': carnet}
     return render_template('boleto.html', active='boleto', est=estudiante, boletos=boletos_lista)
 
 
