@@ -4,7 +4,6 @@ import mysql.connector
 
 app = Flask(__name__)
 
-
 def get_db_connection():
     return mysql.connector.connect(
         host=os.getenv('DB_HOST'),
@@ -13,14 +12,10 @@ def get_db_connection():
         database=os.getenv('DB_NAME')
     )
 
-
-# 1. Landing Page
 @app.route('/')
 def index():
     return render_template('index.html')
 
-
-# 2. Formulario de Validación de Pagos
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
@@ -28,38 +23,27 @@ def registro():
         no_recibo = request.form.get('no_recibo')
         nombre = request.form.get('nombre')
         email = request.form.get('email')
-
-        # Redirige a la vista del ticket pasando el ID asignado
         return render_template('ticket.html', nombre=nombre, carne=carne, no_recibo=no_recibo, id_ticket="TCK-1001")
-
     return render_template('registro.html')
 
-
-# 3. Vista de Ticket con QR
 @app.route('/ticket/<id_ticket>')
 def ticket(id_ticket):
     return render_template('ticket.html', id_ticket=id_ticket)
 
-
-# 4. Panel de Escaneo (Personal de Ingreso)
+# Ruta del panel de escaneo
 @app.route('/admin')
 def admin():
     return render_template('admin.html')
 
-
-# 5. Lógica de Validación de Ticket (AFD)
+# Ruta para procesar la validacion
 @app.route('/validar-ingreso', methods=['POST'])
 def validar_ingreso():
     id_ticket = request.form.get('id_ticket')
-
-    # Simulación de validación (Reemplazar con consulta a Alwaysdata):
-    # Si el ticket no ha sido usado -> Permitido y cambia estado a 'Utilizado'
     if id_ticket == "TCK-1001":
         estudiante_demo = {"nombre": "Juan Pérez", "carne": "20260123", "id_ticket": id_ticket}
         return render_template('admin.html', estado='permitido', estudiante=estudiante_demo)
     else:
         return render_template('admin.html', estado='rechazado')
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
