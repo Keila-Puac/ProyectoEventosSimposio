@@ -1,0 +1,6 @@
+flask
+gunicorn
+mysql-connector-python
+reportlab
+sendgrid
+python-dotenv
