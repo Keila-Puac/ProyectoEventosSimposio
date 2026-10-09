@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="page-title h2 mb-0">Tickets de Coordinación</h1>
+  <form method="post" action="{{ url_for('tickets_prueba') }}" class="d-flex gap-2">
+    <input type="number" name="cantidad" value="500" min="1" max="5000" class="form-control" style="width:110px">
+    <button class="btn btn-outline-primary" title="Solo para pruebas: crea SIM-0001, SIM-0002…"><i class="bi bi-magic me-1"></i>Generar tickets de prueba</button>
+  </form>
+</div>
+<div class="card card-soft p-3 mb-3 d-flex flex-row flex-wrap align-items-center gap-3">
+  <div class="flex-grow-1"><b><i class="bi bi-envelope-paper me-1"></i>Boletos por correo (SendGrid)</b>
+    <div class="small text-muted">{% if correo_activo %}Configurado · {{ c.correos_enviados }} enviados · {{ por_enviar }} por enviar{% else %}No configurado: define <code>SENDGRID_API_KEY</code> y <code>MAIL_USER</code> (ver <code>.env.example</code>).{% endif %}
+    {% if envio.activo %}<br>Enviando… {{ envio.ok }} enviados, {{ envio.fallos }} con error.{% elif envio.fallos %}<br>Último envío: {{ envio.ok }} ok, {{ envio.fallos }} con error ({{ envio.ultimo }}).{% endif %}
+    Se envía solo cuando el estudiante valida su pago o al aceptar una revisión; este botón envía todos los pendientes.</div></div>
+  <form method="post" action="{{ url_for('enviar_correos') }}"><button class="btn btn-azul" {{ 'disabled' if not correo_activo or not por_enviar }}><i class="bi bi-send me-1"></i>Enviar boletos pendientes</button></form>
+</div>
+<p class="text-muted small">Los tickets reales los entrega Coordinación (sube su Excel en «Cargar datos», columna <b>Ticket</b>). El sistema no los genera: solo los asigna.
+  Ciclo de cada ticket: <b>Disponible → Asignado → Utilizado</b>.</p>
+<div class="row text-center g-3 mb-3">
+  <div class="col"><div class="card card-soft p-2"><div class="h3 mb-0 text-success">{{ c.t_DISPONIBLE }}</div><small class="text-muted">Disponibles</small></div></div>
+  <div class="col"><div class="card card-soft p-2"><div class="h3 mb-0 text-primary">{{ c.t_ASIGNADO }}</div><small class="text-muted">Asignados</small></div></div>
+  <div class="col"><div class="card card-soft p-2"><div class="h3 mb-0 text-secondary">{{ c.t_UTILIZADO }}</div><small class="text-muted">Utilizados</small></div></div>
+</div>
+<div class="card card-soft p-3">
+  <div class="table-responsive" style="max-height:560px;overflow:auto">
+    <table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>Ticket</th><th>Estado</th><th>Estudiante</th><th>Recibo</th><th>Asignado</th><th>Usado</th><th>Correo</th></tr></thead><tbody>
+    {% for t in tickets %}<tr><td>{{ t.ticket }}</td>
+      <td><span class="badge bg-{{ {'DISPONIBLE':'success','ASIGNADO':'primary','UTILIZADO':'secondary'}[t.estado] }}">{{ t.estado }}</span></td>
+      <td>{% if t.carnet %}{{ t.carnet }} · {{ t.nombre }}{% endif %}</td><td>{{ t.recibo }}</td><td>{{ t.fecha_asignacion }}</td><td>{{ t.fecha_uso }}</td><td class="small">{{ t.correo_enviado[:16] }}</td></tr>
+    {% else %}<tr><td colspan="7" class="text-center text-muted py-4">No hay tickets cargados.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  {% if total > tickets|length %}<small class="text-muted mt-2">Mostrando los primeros {{ tickets|length }} de {{ total }}.</small>{% endif %}
+</div>
+{% endblock %}

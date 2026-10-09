@@ -1,0 +1,50 @@
+:root{--oscuro:#212529;--azul:#0d6efd;--azul-fuerte:#0a58ca;--amarillo:#ffc107;--amarillo-hover:#ffca2c;--fondo:#f8f9fa}
+body{background:var(--fondo);color:var(--oscuro)}
+
+/* ---- barra de navegación ---- */
+.navbar-simposio{background:var(--oscuro);padding:.75rem 0}
+.navbar-simposio .navbar-brand{color:#fff;font-weight:700;font-size:1.5rem}
+.navbar-simposio .nav-link{color:rgba(255,255,255,.65);font-weight:500;padding:.5rem .75rem;transition:color .15s}
+.navbar-simposio .nav-link:hover,.navbar-simposio .nav-link:focus{color:#fff}
+.navbar-simposio .nav-link.active{color:#fff}
+.navbar-simposio .nav-link.nav-escanear{color:var(--amarillo);font-weight:700}
+.navbar-simposio .nav-link.nav-escanear:hover{color:var(--amarillo-hover)}
+.navbar-simposio .navbar-toggler{border-color:rgba(255,255,255,.4)}
+.navbar-simposio .navbar-toggler-icon{filter:invert(1)}
+.navbar-simposio .dropdown-menu{border:0;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);margin-top:.5rem}
+.navbar-simposio .dropdown-item.active,.navbar-simposio .dropdown-item:active{background:var(--azul)}
+
+/* ---- portada ---- */
+.hero{background:linear-gradient(135deg,#0d6efd 0%,#0a58ca 100%);color:#fff;text-align:center;padding:6rem 0 5.5rem}
+.hero .badge-hero{display:inline-block;background:var(--amarillo);color:var(--oscuro);font-weight:500;
+  border-radius:.5rem;padding:.7rem 1.4rem;font-size:.95rem;margin-bottom:2rem}
+.hero h1{font-weight:800;font-size:clamp(2.2rem,5.5vw,4.4rem);line-height:1.15;margin-bottom:1.5rem}
+.hero p.lead{max-width:760px;margin:0 auto 2.2rem;color:rgba(255,255,255,.88);font-weight:300;font-size:clamp(1.05rem,2vw,1.4rem)}
+.btn-entrada{background:var(--amarillo);color:var(--oscuro);font-weight:700;border:0;border-radius:.6rem;padding:.9rem 2rem;font-size:1.25rem}
+.btn-entrada:hover{background:var(--amarillo-hover);color:var(--oscuro)}
+.btn-hero-outline{color:#fff;border:1px solid #fff;border-radius:.6rem;padding:.9rem 2rem;font-size:1.25rem;background:transparent}
+.btn-hero-outline:hover{background:rgba(255,255,255,.15);color:#fff;border-color:#fff}
+
+/* ---- cronograma ---- */
+.seccion-titulo{font-weight:800;text-align:center;font-size:clamp(1.9rem,3.5vw,2.6rem);margin-bottom:.5rem}
+.seccion-sub{text-align:center;color:#6c757d;font-size:1.15rem;margin-bottom:3rem}
+.card-evento{border:0;border-radius:1rem;background:#fff;box-shadow:0 .25rem .75rem rgba(0,0,0,.06);transition:transform .2s,box-shadow .2s}
+.card-evento:hover{transform:translateY(-4px);box-shadow:0 .75rem 1.5rem rgba(13,110,253,.15)!important}
+.card-evento .card-body{padding:1.5rem}
+.badge-hora{background:#dbe9ff;color:var(--azul);font-weight:500;border-radius:.4rem;padding:.45rem .7rem;font-size:.95rem}
+.badge-cupos{font-weight:700;border-radius:.4rem;padding:.5rem .75rem;font-size:1rem;color:#fff}
+.badge-cupos.ok{background:#198754}
+.badge-cupos.pocos{background:var(--amarillo);color:var(--oscuro)}
+.badge-cupos.agotado{background:#dc3545}
+.card-evento h5{font-weight:700;font-size:1.45rem;margin:1rem 0 .6rem}
+
+/* ---- páginas internas (boleto, login, admin) ---- */
+.page-title{color:var(--oscuro);font-weight:800}
+.card-soft{border:0;border-radius:1rem;background:#fff;box-shadow:0 .25rem .75rem rgba(0,0,0,.06)}
+.btn-azul{background:var(--azul);color:#fff;border:0;border-radius:.5rem;font-weight:500}
+.btn-azul:hover,.btn-azul:focus{background:var(--azul-fuerte);color:#fff}
+.form-control:focus,.form-select:focus{border-color:var(--azul);box-shadow:0 0 0 .2rem rgba(13,110,253,.2)}
+.drop{border:2px dashed var(--azul);border-radius:1rem;background:#fff;padding:2rem;text-align:center}
+.scan-input{font-size:1.4rem;padding:.8rem 1rem}
+#resultado{min-height:3.4rem}
+.pie{background:var(--oscuro);color:rgba(255,255,255,.6);text-align:center;padding:1.25rem 0;font-size:.9rem;margin-top:3rem}

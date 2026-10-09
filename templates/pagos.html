@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% set colores = {'PENDIENTE':'secondary','VALIDADO':'success','REVISION':'warning','DUPLICADO':'danger','INCOMPLETO':'dark','MONTO_INCORRECTO':'danger','RECHAZADO':'danger'} %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="page-title h2 mb-0">Pagos de Tesorería</h1>
+  <div class="d-flex gap-2">
+    <form method="post" action="{{ url_for('conciliar') }}"><button class="btn btn-azul"><i class="bi bi-diagram-3 me-1"></i>Conciliar pagos pendientes ({{ c.PENDIENTE }})</button></form>
+    {% if c.pagos %}<form method="post" action="{{ url_for('vaciar_pagos') }}" onsubmit="return confirm('¿Vaciar todos los pagos?')"><button class="btn btn-outline-danger"><i class="bi bi-trash"></i></button></form>{% endif %}
+  </div>
+</div>
+<p class="text-muted small">Monto esperado: <b>{{ monto }}</b> · similitud alta ≥ {{ umbral_alto|int }}% (validación automática) · intermedia ≥ {{ umbral_min|int }}% (revisión manual).
+  Los valores se cambian con las variables de entorno <code>MONTO_SIMPOSIO</code>, <code>UMBRAL_ALTO</code> y <code>UMBRAL_MIN</code>.</p>
+<div class="mb-3 d-flex flex-wrap gap-2">
+  <a class="btn btn-sm {{ 'btn-dark' if not sel else 'btn-outline-dark' }}" href="{{ url_for('pagos') }}">Todos ({{ c.pagos }})</a>
+  {% for e in estados %}<a class="btn btn-sm btn-{{ '' if sel==e else 'outline-' }}{{ colores[e] }}" href="{{ url_for('pagos', estado=e) }}">{{ e.replace('_',' ').title() }} ({{ c[e] }})</a>{% endfor %}
+</div>
+<div class="card card-soft p-3">
+  <div class="table-responsive" style="max-height:640px;overflow:auto">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-light"><tr><th>Recibo</th><th>Fecha</th><th>Nombre en recibo</th><th>Monto</th><th>Estado</th><th>Estudiante</th><th>Ticket</th><th>Detalle</th></tr></thead>
+      <tbody>
+      {% for p in pagos %}
+        <tr><td>{{ p.recibo }}</td><td>{{ p.fecha }}</td><td>{{ p.nombre }}</td><td>{{ p.monto }}</td>
+          <td><span class="badge bg-{{ colores[p.estado] }}">{{ p.estado.replace('_',' ') }}</span></td>
+          <td>{% if p.carnet %}<b>{{ p.carnet }}</b> · {{ p.nombre_oficial }}{% endif %}</td>
+          <td>{{ p.ticket }}</td>
+          <td class="small text-muted" title="{{ p.traza|traza }}">{{ p.motivo }}</td></tr>
+      {% else %}<tr><td colspan="8" class="text-center text-muted py-4">No hay pagos. Sube el reporte de Tesorería en «Cargar datos».</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if total > pagos|length %}<small class="text-muted mt-2">Mostrando los primeros {{ pagos|length }} de {{ total }}.</small>{% endif %}
+</div>
+{% endblock %}

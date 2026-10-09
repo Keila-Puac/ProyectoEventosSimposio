@@ -1,0 +1,10 @@
+data/
+.env
+__pycache__/
+tickets_pdf/
+qr_externo.db
+progreso_qr.json
+cache_estudiantes.json
+venv/
+REPORTE DE TESORERIA*.xlsx
+legacy_no_usar/

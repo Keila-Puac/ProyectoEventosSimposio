@@ -1,49 +1,17 @@
 {% extends "base.html" %}
-
-{% block title %}Crear Evento - Simposio 2026{% endblock %}
-
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-lg-9">
-    <h1 class="page-title h2 mb-4 fw-bold"><i class="bi bi-plus-circle text-primary me-2"></i>Crear evento</h1>
-
-    <form method="post" class="card card-soft p-4 shadow-sm border-0 rounded-4">
-      <div class="row g-3">
-        <div class="col-12">
-          <label class="form-label fw-semibold">Nombre *</label>
-          <input class="form-control" name="nombre" value="{{ f.get('nombre','') }}" placeholder="Ej. Taller de Ciberseguridad" required>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Fecha *</label>
-          <input type="date" class="form-control" name="fecha" value="{{ f.get('fecha','') }}" required>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Hora *</label>
-          <input type="time" class="form-control" name="hora" value="{{ f.get('hora','') }}" required>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Cupos</label>
-          <input type="number" min="0" class="form-control" name="cupos" value="{{ f.get('cupos','50') }}">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label fw-semibold">Lugar</label>
-          <input class="form-control" name="lugar" value="{{ f.get('lugar','') }}" placeholder="Ej. Auditorio Central">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label fw-semibold">Ponente</label>
-          <input class="form-control" name="ponente" value="{{ f.get('ponente','') }}" placeholder="Ej. Dra. Sofía Ramos">
-        </div>
-        <div class="col-12">
-          <label class="form-label fw-semibold">Descripción</label>
-          <textarea class="form-control" rows="3" name="descripcion" placeholder="Detalles de la conferencia o taller...">{{ f.get('descripcion','') }}</textarea>
-        </div>
-      </div>
-
-      <div class="mt-4 d-flex gap-2">
-        <button class="btn btn-primary px-4 fw-bold shadow-sm"><i class="bi bi-check-lg me-1"></i>Guardar evento</button>
-        <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Cancelar</a>
-      </div>
-    </form>
+<h1 class="page-title h2 mb-4">{{ 'Modificar evento' if editando else 'Crear evento' }}</h1>
+<form method="post" class="card card-soft p-4">
+  <div class="row g-3">
+    <div class="col-12"><label class="form-label">Nombre *</label><input class="form-control" name="nombre" value="{{ f.get('nombre','') }}" required></div>
+    <div class="col-md-4"><label class="form-label">Fecha *</label><input type="date" class="form-control" name="fecha" value="{{ f.get('fecha','') }}" required></div>
+    <div class="col-md-4"><label class="form-label">Hora *</label><input type="time" class="form-control" name="hora" value="{{ f.get('hora','') }}" required></div>
+    <div class="col-md-4"><label class="form-label">Cupos</label><input type="number" min="0" class="form-control" name="cupos" value="{{ f.get('cupos','50') }}"></div>
+    <div class="col-md-6"><label class="form-label">Lugar</label><input class="form-control" name="lugar" value="{{ f.get('lugar','') }}"></div>
+    <div class="col-md-6"><label class="form-label">Ponente</label><input class="form-control" name="ponente" value="{{ f.get('ponente','') }}"></div>
+    <div class="col-12"><label class="form-label">Descripción</label><textarea class="form-control" rows="3" name="descripcion">{{ f.get('descripcion','') }}</textarea></div>
   </div>
-</div>
+  <div class="mt-4 d-flex gap-2"><button class="btn btn-azul px-4"><i class="bi bi-check-lg me-1"></i>{{ 'Guardar cambios' if editando else 'Guardar evento' }}</button>
+  <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Cancelar</a></div>
+</form>
 {% endblock %}

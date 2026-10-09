@@ -1,49 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="page-title h2 mb-4">Mi boleto</h1>
-
-{% if not est %}
-<div class="row justify-content-center">
-  <div class="col-md-7 col-lg-5">
-    <form method="post" class="card card-soft p-4 shadow-sm border-0">
-      <p class="text-muted">Ingresa tu carnet y el correo con el que te inscribiste para ver tus boletos con código QR.</p>
-      <label class="form-label fw-semibold">Carnet</label>
-      <input class="form-control mb-3" name="carnet" placeholder="2026-0001" required autofocus>
-      <label class="form-label fw-semibold">Correo</label>
-      <input class="form-control mb-3" type="email" name="correo" placeholder="tu@correo.edu.gt" required>
-      <button class="btn btn-primary fw-bold"><i class="bi bi-ticket-perforated me-1"></i>Ver mi boleto</button>
-    </form>
-  </div>
-</div>
-{% else %}
-<p class="lead mb-4">Hola, <b>{{ est.nombre }}</b> <span class="text-muted">· {{ est.carnet }}</span></p>
-
-{% if not boletos %}
-  <div class="alert alert-info">Todavía no hay eventos disponibles.</div>
-{% endif %}
-
-<div class="row g-4">
-{% for b in boletos %}
-  <div class="col-md-6 col-xl-4">
-    <div class="card card-soft h-100 overflow-hidden border-0 shadow-sm">
-      <div class="px-3 py-2 text-white bg-dark d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-ticket-perforated me-1"></i>Boleto de acceso</span>
-        {% if b.ya_ingreso %}
-          <span class="badge bg-success">Ya ingresaste</span>
-        {% endif %}
-      </div>
-      <div class="card-body text-center">
-        <img class="img-fluid my-2" style="max-width:220px" alt="QR" src="{{ url_for('boleto_qr', eid=b.id, carnet=est.carnet, sig=b.sig) }}">
-        <h5 class="fw-bold mt-2">{{ b.nombre }}</h5>
-        <div class="text-muted small"><i class="bi bi-clock me-1"></i>{{ b.fecha }} · {{ b.hora }}</div>
-        <div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ b.lugar or '—' }}</div>
-        <a class="btn btn-outline-primary btn-sm mt-3" href="{{ url_for('boleto_pdf', eid=b.id, carnet=est.carnet, sig=b.sig) }}"><i class="bi bi-download me-1"></i>Descargar PDF</a>
-      </div>
+<div class="row justify-content-center"><div class="col-lg-6">
+  <h1 class="page-title h2 mb-1">Mi boleto</h1>
+  <p class="text-muted">Después de pagar en Tesorería, escribe tu carnet y el número de recibo para validar tu pago y recibir tu confirmación de ingreso.</p>
+  <form method="post" class="card card-soft p-4 mb-3">
+    <label class="form-label fw-semibold">Carnet</label>
+    <input name="carnet" class="form-control mb-3" placeholder="2026-0001" value="{{ r.carnet if r else '' }}" required>
+    <label class="form-label fw-semibold">Número de recibo</label>
+    <input name="recibo" class="form-control mb-3" placeholder="25041654" inputmode="numeric" value="{{ r.recibo if r else '' }}" required>
+    <button class="btn btn-azul"><i class="bi bi-patch-check me-1"></i>Validar mi pago</button>
+  </form>
+  {% if r %}
+    {% if r.estado == 'VALIDADO' %}
+    <div class="card card-soft p-4 text-center border-success">
+      <div class="text-success h5"><i class="bi bi-check-circle-fill me-1"></i>{{ r.msg }}</div>
+      <div class="fs-5 fw-bold">{{ r.nombre }}</div>
+      <div class="text-muted">Carnet {{ r.carnet }} · Ticket <b>{{ r.ticket }}</b></div>
+      <img class="my-3 mx-auto" style="max-width:260px" src="{{ url_for('boleto_qr', ticket=r.ticket, sig=r.sig) }}" alt="Código QR del ticket">
+      <a class="btn btn-azul" href="{{ url_for('boleto_pdf', ticket=r.ticket, sig=r.sig) }}"><i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF</a>
+      {% if correo_activo %}<small class="text-success mt-2"><i class="bi bi-envelope-check me-1"></i>Te enviamos una copia a tu correo registrado.</small>{% endif %}
+      <small class="text-muted mt-2">Presenta este QR (o el número de ticket) al ingresar. Es de un solo uso.</small>
     </div>
-  </div>
-{% endfor %}
-</div>
-
-<a class="btn btn-link mt-3 text-decoration-none" href="{{ url_for('boleto') }}">Consultar otro carnet</a>
-{% endif %}
+    {% else %}
+    <div class="alert alert-{{ 'warning' if r.estado in ('REVISION','SIN_TICKET') else 'danger' }}"><i class="bi bi-exclamation-triangle me-2"></i>{{ r.msg }}</div>
+    {% endif %}
+  {% endif %}
+</div></div>
 {% endblock %}
