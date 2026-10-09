@@ -70,6 +70,32 @@ def nuevo_evento():
         return redirect(url_for('index'))
     return render_template('crear_evento.html', active='crear', f=formulario_datos)
 
+@app.route('/eliminar-evento/<int:eid>', methods=['POST'])
+def eliminar_evento(eid):
+    evento = next(
+        (e for e in EVENTOS_DEMO if e['id'] == eid),
+        None
+    )
+
+    if evento is None:
+        flash('El evento no existe.', 'danger')
+        return redirect(url_for('index'))
+
+    # Eliminar los ingresos asociados al evento
+    INGRESOS_DEMO[:] = [
+        ingreso for ingreso in INGRESOS_DEMO
+        if ingreso['evento_id'] != eid
+    ]
+
+    # Eliminar el evento
+    EVENTOS_DEMO.remove(evento)
+
+    flash(
+        f"El evento '{evento['nombre']}' se eliminó correctamente.",
+        'success'
+    )
+
+    return redirect(url_for('index'))
 
 @app.route('/datos', methods=['GET', 'POST'])
 def datos():
@@ -172,6 +198,8 @@ def boleto_qr(eid, carnet, sig):
 def boleto_pdf(eid, carnet, sig):
     flash('Descargando archivo PDF...', 'info')
     return redirect(url_for('boleto'))
+
+
 
 
 if __name__ == '__main__':
