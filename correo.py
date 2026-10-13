@@ -21,6 +21,14 @@ def enviar_boleto(destino, nombre, ticket, pdf_bytes):
     """Devuelve (ok, mensaje). El PDF va adjunto."""
     if not configurado():
         return False, "Falta SENDGRID_API_KEY o MAIL_USER."
+    texto = (
+    f"¡Hola {nombre}!\n\n"
+    f"Tu pago fue validado para el XIX Simposio de Ingeniería.\n"
+    f"Adjunto encontrarás tu confirmación de ingreso (ticket {ticket}) con tu código QR. "
+    f"Guárdala en tu teléfono o imprímela: se puede usar una sola vez.\n\n"
+    f"Facultad de Ingeniería · Comité Organizador"
+    )
+
     cuerpo = f"""
     <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <h2 style="color: #1A365D;">¡Hola {nombre}!</h2>
@@ -33,7 +41,9 @@ def enviar_boleto(destino, nombre, ticket, pdf_bytes):
     datos = {
         "personalizations": [{"to": [{"email": destino}], "subject": "Tu confirmación de ingreso al Simposio de Ingeniería"}],
         "from": {"email": os.getenv("MAIL_USER"), "name": "Simposio de Ingeniería"},
-        "content": [{"type": "text/html", "value": cuerpo}],
+        "content": [
+            {"type": "text/plain", "value": texto},
+            {"type": "text/html", "value": cuerpo}],
         "attachments": [{"content": base64.b64encode(pdf_bytes).decode(), "filename": f"Boleto_{ticket}.pdf",
                          "type": "application/pdf", "disposition": "attachment"}],
     }
