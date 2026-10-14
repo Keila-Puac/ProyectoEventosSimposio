@@ -39,7 +39,7 @@ except ImportError:  # Windows: basta el candado de hilos
 UMBRAL_ALTO = float(os.getenv("UMBRAL_ALTO", 95))
 UMBRAL_MIN = float(os.getenv("UMBRAL_MIN", 75))
 MONTO_CORRECTO = Decimal(os.getenv("MONTO_SIMPOSIO", "280"))   # el reporte de 2025 mostraba Q280
-MONTO_DOCENTE = Decimal(os.getenv("MONTO_DOCENTE", "350"))       # docente (ajusta el valor)
+MONTO_DOCENTE = Decimal(os.getenv("MONTO_DOCENTE", "150"))       # docente (ajusta el valor)
 MONTOS_VALIDOS = {MONTO_CORRECTO, MONTO_DOCENTE}
 UMBRAL_CARNET = float(os.getenv("UMBRAL_CARNET", 85))  # si el estudiante ya dio su carnet, basta una afinidad menor
 LIMITE_CANDIDATOS = 3
